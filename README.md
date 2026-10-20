@@ -21,7 +21,7 @@ Full spec: `JARVIS_SPEC.md`. Current status: `PROGRESS.md`.
    powershell -ExecutionPolicy Bypass -File .\stop.ps1
    ```
    `start.ps1 -Dev` also runs the Vite dev server on http://127.0.0.1:5173.
-7. First run: JARVIS opens two Chromium windows (`main` and `side`). Log in to YouTube/Google, LeetCode and claude.ai in them **once, by hand**. The profiles live in `data\profiles\` and keep the logins.
+7. First run: log in to YouTube/Google, LeetCode and claude.ai **once, by hand**. Google and claude.ai refuse sign-in inside the automated windows, so with JARVIS stopped run `powershell -ExecutionPolicy Bypass -File .\login.ps1`: it opens the same two profiles (`main` and `side`) without automation; log in, then close both windows. The profiles live in `data\profiles\` and keep the logins.
 
 Without an API key JARVIS still runs every saved workflow; only new commands (the LLM route) are unavailable.
 

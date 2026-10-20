@@ -24,8 +24,8 @@
 | M2 Registry/router/executor | done | 2026-10-20 | pytest 53 passed on Windows |
 | M3 Browser + window tools | done | 2026-10-20 | real smoke run: YouTube /watch reached (playing, not paused); workspace LeetCode left [0,0,768,816], Claude right [768,0,1536,816] on 1536x816 work area, verify_workspace passed; no windows.py changes needed |
 | M4 Dashboard | built, partly verified | 2026-10-20 | `npm run build` passes on Windows (Node 24.22.0); served by backend at :8765; UI not re-clicked through on Windows |
-| M5 Notion + real planner | code done, real run UNTESTED | 2026-10-20 | LLM key filled (`llm_configured: true`) but no planner command was sent; Notion not run |
-| M6 Voice + TTS | code done, UNTESTED | 2026-10-20 | `install.ps1 -Voice` not run |
+| M5 Notion + real planner | code done, blocked on user | 2026-10-20 | "open claude" routed to the LLM; Anthropic returned 400 "credit balance is too low", shown cleanly as an error. Needs API credits. Notion not run |
+| M6 Voice + TTS | STT done, TTS UNTESTED | 2026-10-20 | `install.ps1 -Voice` OK; faster-whisper 1.2.1 broke with PyAV 19 (`open() got an unexpected keyword argument 'metadata_errors'`), pinned `av==14.2.0`. POST /api/voice with a SAPI-generated WAV: transcript "Play a video about Python decorators." in 3.94s, then youtube_play ran locally and verified. Real mic via dashboard button not tried; TTS output not checked |
 | M7 UFO in planner | code done, real UFO UNTESTED | 2026-10-20 | UFO installed (vendor\UFO, Python 3.11.9 venv) but agents.yaml not filled, so the Notepad task was not run |
 
 ## Last session (2026-10-20, Windows laptop)
@@ -40,8 +40,12 @@
 - Observed: on the 2nd workspace run claude.ai redirected the side window to `/login?from=logout&reauth=1` (session logged out by claude.ai). open_claude still verifies as passed and reports `needs_login: true`.
 - UNTESTED: real LLM planner route, Notion, UFO task, voice/TTS, dashboard UI clicks on Windows, multi-monitor.
 
+- Login: Google / claude.ai refuse sign-in inside the Playwright-driven windows. Added `login.ps1`: with JARVIS stopped it opens the same profiles (`data\profiles\main`, `side`) in Playwright's Chromium without automation for a normal manual login, then waits for the windows to close. User logged in this way; persistence on claude.ai not yet re-checked (only the workspace workflow opens Claude, and the user asked not to run LeetCode for now).
+- `HF_HOME=D:\Tools\cache\huggingface` (user env var) so the whisper model is on D:.
+
 ## Blocked on user
-- [ ] Log in to claude.ai again in the side window and check it stays logged in
+- [ ] Add Anthropic API credits (planner returns "credit balance is too low")
+- [ ] Check claude.ai stays logged in (user asked to skip LeetCode, so the workspace test was not re-run)
 - [ ] Fill `vendor\UFO\config\ufo\agents.yaml` (OpenAI/Azure key) or set `UFO_ENABLED=false` in `.env`
 - [ ] Notion values in `.env` if Notion is wanted
 
