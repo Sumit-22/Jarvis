@@ -97,7 +97,12 @@ if ($SkipUfo) {
             Run $ufoPy @('-m', 'venv', "$ufoDir\.venv")
         }
         Info "Installing UFO requirements (this can take a while)..."
-        Run $ufoVenvPy @('-m', 'pip', 'install', '--disable-pip-version-check', '-q', '-r', "$ufoDir\requirements.txt")
+        # UFO pins pandas==1.4.3, which has no Python 3.11 wheel and fails to build from source
+        # (its setup.py needs pkg_resources). 1.5.3 is the oldest pandas with 3.11 wheels.
+        # Patch a copy inside the venv so vendor\UFO itself stays unmodified.
+        $ufoReq = "$ufoDir\.venv\jarvis-requirements.txt"
+        (Get-Content "$ufoDir\requirements.txt") -replace '^pandas==1\.4\.3\s*$', 'pandas==1.5.3' | Set-Content -Encoding ASCII $ufoReq
+        Run $ufoVenvPy @('-m', 'pip', 'install', '--disable-pip-version-check', '-q', '--prefer-binary', '-r', $ufoReq)
         $cfg = "$ufoDir\config\ufo\agents.yaml"
         if (-not (Test-Path $cfg)) {
             Copy-Item "$ufoDir\config\ufo\agents.yaml.template" $cfg

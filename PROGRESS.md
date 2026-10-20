@@ -2,9 +2,12 @@
 
 ## Environment (from M0)
 - Build machine for this first pass: a Linux cloud container (Python 3.13, Node 22), not the target laptop.
-- Target laptop (Acer Aspire 3, i5 11th gen): **not inspected yet.** Run `.\inspect.ps1` on it and paste the output here.
-- Windows: ... | CPU: ... | RAM: ... | Free disk: ...
-- Python: ... | Node: ... | Git: ... | PowerShell: ... | Execution policy: ...
+- Target laptop: inspected 2026-10-20 with `inspect.ps1` (repo at `D:\Github Projects\GitHub\Jarvis`, not `C:\Jarvis`).
+- Windows: Windows 11 Home Single Language 10.0.26200 (build 26200) | CPU: 11th Gen Intel Core i5-1135G7 @ 2.40GHz | RAM: 7.8 GB | Free on C: 7.4 GB
+- Python (py -0p): 3.14 (default) `C:\Users\USER\AppData\Local\Python\pythoncore-3.14-64\python.exe`, 3.12 `C:\Users\USER\AppData\Local\Programs\Python\Python312\python.exe`; **no 3.11**
+- Node: not found | npm: not found | Git: 2.46.2.windows.1 | PowerShell: 5.1.26100.8457
+- Execution policy: MachinePolicy/UserPolicy/CurrentUser/LocalMachine Undefined, Process Bypass (from `-ExecutionPolicy Bypass`)
+- UFO: not cloned yet
 
 ## UFO (from the repo's own docs)
 - Repo: https://github.com/microsoft/UFO, commit read: `eae3c0a8d168c47cb10df0652e293e092eda1078`
@@ -16,27 +19,31 @@
 ## Milestones
 | Milestone | Status | Date | Notes |
 |---|---|---|---|
-| M0 Inspect | blocked on user | 2026-10-19 | UFO docs read and recorded; laptop values need `inspect.ps1` |
-| M1 Skeleton + scripts | code done, UNTESTED on Windows | 2026-10-19 | install/start/stop.ps1 written; no PowerShell was available to run them |
-| M2 Registry/router/executor | done | 2026-10-19 | pytest: all M2 acceptance tests pass (mocked) |
-| M3 Browser + window tools | code done, smoke run UNTESTED | 2026-10-19 | unit tests pass with Playwright/pywin32/UFO mocked; needs the manual smoke run on Windows |
-| M4 Dashboard | built, partly verified | 2026-10-19 | verified in headless Chromium against a dry-run backend: live steps, approval dialog, local route; Stop < 2s verified in pytest |
-| M5 Notion + real planner | code done, blocked on user | 2026-10-19 | mocked tests pass; needs keys in .env and a real run |
-| M6 Voice + TTS | code done, UNTESTED | 2026-10-19 | needs `install.ps1 -Voice` and a mic |
-| M7 UFO in planner | code done, real UFO UNTESTED | 2026-10-19 | tested against a stub UFO subprocess only |
+| M0 Inspect | done | 2026-10-20 | `inspect.ps1` run on the laptop, output above |
+| M1 Skeleton + scripts | done (UFO task UNTESTED) | 2026-10-20 | install.ps1 run 1 failed on UFO `pandas==1.4.3` (no py3.11 wheel, sdist needs pkg_resources); fixed by installing from a patched copy pinning pandas==1.5.3. Run 2 exit 0, run 3 exit 0 in 86s with nothing recreated (idempotent). start.ps1 -> /api/health 200, stop.ps1 -> backend stopped, health unreachable, pids.json removed |
+| M2 Registry/router/executor | done | 2026-10-20 | pytest 53 passed on Windows |
+| M3 Browser + window tools | done | 2026-10-20 | real smoke run: YouTube /watch reached (playing, not paused); workspace LeetCode left [0,0,768,816], Claude right [768,0,1536,816] on 1536x816 work area, verify_workspace passed; no windows.py changes needed |
+| M4 Dashboard | built, partly verified | 2026-10-20 | `npm run build` passes on Windows (Node 24.22.0); served by backend at :8765; UI not re-clicked through on Windows |
+| M5 Notion + real planner | code done, real run UNTESTED | 2026-10-20 | LLM key filled (`llm_configured: true`) but no planner command was sent; Notion not run |
+| M6 Voice + TTS | code done, UNTESTED | 2026-10-20 | `install.ps1 -Voice` not run |
+| M7 UFO in planner | code done, real UFO UNTESTED | 2026-10-20 | UFO installed (vendor\UFO, Python 3.11.9 venv) but agents.yaml not filled, so the Notepad task was not run |
 
-## Last session
-- Changed: whole codebase (backend, dashboard, scripts, tests).
-- Tests: 53 passed, 0 failed (`cd backend; .venv\Scripts\python -m pytest`), on Linux/Python 3.13.
-- Frontend: `npm run build` passes (tsc + vite).
-- Manually verified (dry run, headless Chromium on Linux): dashboard loads, "open my coding workspace for two-sum" routes locally with 0 planner calls, missing slug asks the user, Notion step shows the approval dialog and waits.
-- UNTESTED: everything that touches Windows (pywin32, real Chromium windows, window layout), real YouTube/LeetCode/claude.ai pages, real Notion, real LLM API, real UFO, faster-whisper, pyttsx3, all .ps1 scripts.
+## Last session (2026-10-20, Windows laptop)
+- Repo lives at `D:\Github Projects\GitHub\Jarvis` (not `C:\Jarvis`); scripts use `$PSScriptRoot`, so this works.
+- Installed per-user on D: (user asked): Node v24.22.0 portable at `D:\Tools\nodejs` (SHA256 verified, added to user PATH), Python 3.11.9 at `D:\Tools\Python311` (signed installer, per-user, registered with `py -3.11`). JARVIS backend venv uses Python 3.12.
+- User env vars to keep C: free: `PLAYWRIGHT_BROWSERS_PATH=D:\Tools\ms-playwright`, `PIP_CACHE_DIR=D:\Tools\cache\pip`, `npm_config_cache=D:\Tools\cache\npm`.
+- Changed: `install.ps1` (UFO pandas pin workaround).
+- Tests: 53 passed, 0 failed (`cd backend; .venv\Scripts\python -m pytest -q`, 14.9s), Windows / Python 3.12.
+- Smoke (POST /api/command?wait=true):
+  - "play a video about python decorators": route local, youtube_play, search 10 results, /watch?v=PTBZ674EsvI, has_video, not paused.
+  - "open my coding workspace for two-sum" x2 (plus one earlier run to open the windows): route local via pattern, all 4 steps verified both times; /api/usage planner_calls 0 -> 0 -> 0, cache_hits 3 -> 4.
+- Observed: on the 2nd workspace run claude.ai redirected the side window to `/login?from=logout&reauth=1` (session logged out by claude.ai). open_claude still verifies as passed and reports `needs_login: true`.
+- UNTESTED: real LLM planner route, Notion, UFO task, voice/TTS, dashboard UI clicks on Windows, multi-monitor.
 
 ## Blocked on user
-- [ ] Install prerequisites if missing: Python 3.11 (works for both JARVIS and UFO), Node 20+ LTS, Git
-- [ ] Copy this folder to `C:\Jarvis`, run `powershell -ExecutionPolicy Bypass -File .\install.ps1`
-- [ ] Fill `.env` (LLM_API_KEY etc.) and `vendor\UFO\config\ufo\agents.yaml` yourself
-- [ ] Run `.\inspect.ps1` and paste output into the Environment section
+- [ ] Log in to claude.ai again in the side window and check it stays logged in
+- [ ] Fill `vendor\UFO\config\ufo\agents.yaml` (OpenAI/Azure key) or set `UFO_ENABLED=false` in `.env`
+- [ ] Notion values in `.env` if Notion is wanted
 
 ## Next action
-- On the laptop: finish M0/M1 acceptance (install twice, start, health 200, stop, one UFO Notepad task), then the M3 smoke run.
+- Run one UFO Notepad task once agents.yaml is filled; send one new command to exercise the real planner; check claude.ai login persistence.
