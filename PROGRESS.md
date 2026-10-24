@@ -107,6 +107,9 @@
 - End to end via API after restart: play 4.9 s (first) / 4.2 s, pause 0.1-1.4 s, play 0.5 s, voice "video pause karo" 1.7 s, voice "skip ad" 1.5 s, tell_time 0.1 s. All succeeded.
 - Tests: 287 passed, 0 failed.
 
+## Session 2026-10-24 (cont.): dashboard responsive + Apple HIG pass
+- Headless audit at 12 viewports (280-2560 px): before, cards overlapped on 1024x768 and 1280x720 (fixed-height 3-column layout), 34 touch targets under 44 pt, 10 px text. After: no horizontal scroll, no overlap, 0 small touch targets on touch devices, no text under 11 px, no console errors. Details in CHANGELOG.md. `npm run build` and `tsc --noEmit` pass. Not tried on a real iPhone/iPad.
+
 ## Blocked on user
 - [ ] For the claude.ai website target: stop JARVIS, run `login.ps1`, sign in to claude.ai in the side window
 - [ ] Planner LLM: add Anthropic credits, or switch `.env` to a free OpenAI-compatible API (Gemini / Groq) via `LLM_BASE_URL`

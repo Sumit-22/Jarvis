@@ -43,6 +43,17 @@ const QUICK = [
 ];
 const SUGGESTIONS = ["google best laptops under 50000", "directions to india gate", "remind me in 20 minutes to drink water", "youtube pe arijit singh chalao", "open my downloads", "repeat the last workflow"];
 
+function useMedia(query: string) {
+  const [match, setMatch] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setMatch(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [query]);
+  return match;
+}
+
 let msgId = 0;
 let toastId = 0;
 
@@ -201,6 +212,7 @@ export default function App() {
 
   const running = run?.status === "running";
   const busy = orb === "planning" || orb === "executing";
+  const shortScreen = useMedia("(max-height: 860px), (max-width: 640px)");
 
   return (
     <div className="relative min-h-full overflow-x-hidden lg:h-full">
@@ -208,18 +220,18 @@ export default function App() {
       <div className="relative z-10 mx-auto flex max-w-[1560px] flex-col gap-4 p-3 sm:p-5 lg:h-full">
         <TopBar connected={connected} health={health} running={running} onStop={() => api.stop(run?.execution_id)} voice={voice} setVoice={setVoice} />
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)_340px]">
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)_280px] xl:grid-cols-[300px_minmax(0,1fr)_340px]">
           {/* Left: orb, quick actions, usage */}
           <aside className="flex min-h-0 flex-col gap-4">
-            <motion.section layout className="glass flex flex-col items-center px-5 pb-6 pt-9" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={SPRING}>
-              <Orb state={orb} connected={connected} />
+            <motion.section className={`glass flex shrink-0 flex-col items-center px-5 ${shortScreen ? "pb-4 pt-5" : "pb-6 pt-9"}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={SPRING}>
+              <Orb state={orb} connected={connected} size={shortScreen ? 96 : 160} />
             </motion.section>
-            <Card title="Quick actions" icon="bolt" delay={0.05}>
-              <div className="grid grid-cols-3 gap-2 px-4 pb-4">
+            <Card title="Quick actions" icon="bolt" delay={0.05} className="lg:min-h-[9.5rem] lg:flex-1">
+              <div className="no-scrollbar grid max-h-[11.5rem] min-h-0 auto-rows-max grid-cols-3 content-start gap-2 lg:max-h-none lg:flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-1 [mask-image:linear-gradient(to_bottom,black_calc(100%-1.25rem),transparent)]">
                 {QUICK.map((q) => (
                   <motion.button key={q.label} whileHover={{ y: -2 }} whileTap={{ scale: 0.94 }} transition={SPRING}
                     disabled={!connected || running} onClick={() => send(q.cmd)} title={q.cmd}
-                    className="group flex flex-col items-center gap-1.5 rounded-2xl bg-white/[0.04] px-1 py-3 text-[11px] text-slate-300 ring-1 ring-white/[0.06] transition hover:bg-white/[0.08] hover:text-white disabled:opacity-40">
+                    className="group flex min-h-11 flex-col items-center gap-1.5 rounded-2xl bg-white/[0.04] px-1 py-3 text-[12px] text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70 ring-1 ring-white/[0.06] transition hover:bg-white/[0.08] hover:text-white disabled:opacity-40">
                     <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-cyan/25 to-blue/25 text-cyan transition group-hover:from-cyan/40 group-hover:to-blue/40">
                       <Icon name={q.icon} />
                     </span>
@@ -232,7 +244,7 @@ export default function App() {
           </aside>
 
           {/* Middle: conversation + composer */}
-          <motion.section className="glass order-first flex min-h-[70vh] flex-col overflow-hidden lg:order-none lg:min-h-0" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.03 }}>
+          <motion.section className="glass order-first flex min-h-[70vh] min-h-[70dvh] flex-col overflow-hidden lg:order-none lg:min-h-0" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.03 }}>
             <div className="flex items-center justify-between px-5 pt-4">
               <div className="eyebrow">Conversation</div>
               {messages.length > 0 && <button className="text-xs text-dim transition hover:text-white" onClick={() => setMessages([])}>Clear</button>}
@@ -242,7 +254,7 @@ export default function App() {
               <LayoutGroup>
                 <AnimatePresence initial={false}>
                   {messages.map((m) => (
-                    <motion.div key={m.id} layout initial={{ opacity: 0, y: 14, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={SPRING}
+                    <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={SPRING}
                       className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                       <Bubble m={m}>
                         {m.action && !m.action.done && <ActionBar action={m.action} onDone={() => markDone(m.id)} runWf={runWf} send={send} say={say} />}
@@ -250,7 +262,7 @@ export default function App() {
                     </motion.div>
                   ))}
                   {busy && (
-                    <motion.div key="typing" layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} transition={SPRING}>
+                    <motion.div key="typing" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} transition={SPRING}>
                       <TypingDots color={PALETTE[orb][0]} />
                     </motion.div>
                   )}
@@ -261,11 +273,11 @@ export default function App() {
           </motion.section>
 
           {/* Right: current task, workflows, activity */}
-          <aside className="flex min-h-0 flex-col gap-4">
+          <aside className="flex min-h-0 flex-col gap-4 lg:-mr-1 lg:overflow-y-auto lg:pr-1 [&>*]:shrink-0">
             <AnimatePresence>{claude && <ClaudeCard job={claude} connected={connected} send={send} />}</AnimatePresence>
             <TaskCard run={run} />
             <WorkflowsCard workflows={workflows} disabled={running || !connected} runWf={runWf} />
-            <Card title="Tool activity" icon="list" className="max-h-56 lg:max-h-none lg:flex-1" delay={0.12}>
+            <Card title="Tool activity" icon="list" className="max-h-56 lg:max-h-none lg:min-h-48 lg:flex-1" delay={0.12}>
               <ul className="space-y-1 overflow-y-auto px-4 pb-4 font-mono text-[11px] leading-relaxed">
                 {activity.length === 0 && <li className="text-dim">No tool calls yet.</li>}
                 {activity.slice().reverse().map((a, i) => (
@@ -288,20 +300,19 @@ const pretty = (name?: string | null) => (name ? name.replace(/_/g, " ") : name)
 /* ---------- layout pieces ---------- */
 
 function Aurora({ state }: { state: OrbState | "offline" }) {
-  const reduce = useReducedMotion();
   const [a, b, c] = PALETTE[state];
   const blobs = [
-    { col: a, cls: "-left-40 -top-40 h-[34rem] w-[34rem]", x: [0, 80, 0], y: [0, 60, 0] },
-    { col: b, cls: "-right-48 top-1/4 h-[38rem] w-[38rem]", x: [0, -70, 0], y: [0, 90, 0] },
-    { col: c, cls: "-bottom-56 left-1/3 h-[36rem] w-[36rem]", x: [0, 60, 0], y: [0, -70, 0] },
+    { col: a, cls: "-left-40 -top-40 h-[34rem] w-[34rem]" },
+    { col: b, cls: "-right-48 top-1/4 h-[38rem] w-[38rem]" },
+    { col: c, cls: "-bottom-56 left-1/3 h-[36rem] w-[36rem]" },
   ];
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
       {blobs.map((bl, i) => (
         <motion.div key={i} className={`absolute rounded-full blur-[120px] ${bl.cls}`}
-          animate={reduce ? { backgroundColor: bl.col } : { backgroundColor: bl.col, x: bl.x, y: bl.y }}
+          animate={{ backgroundColor: bl.col }}
           style={{ opacity: 0.24 }}
-          transition={{ backgroundColor: { duration: 1.2 }, x: { duration: 22 + i * 4, repeat: Infinity, ease: "easeInOut" }, y: { duration: 26 + i * 3, repeat: Infinity, ease: "easeInOut" } }} />
+          transition={{ backgroundColor: { duration: 1.2 } }} />
       ))}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#03050a_85%)]" />
       <div className="absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.6)_1px,transparent_1px)] [background-size:48px_48px]" />
@@ -319,18 +330,22 @@ function TopBar({ connected, health, running, onStop, voice, setVoice }: {
   useEffect(() => { const t = window.setInterval(() => setClock(new Date()), 15000); return () => window.clearInterval(t); }, []);
   return (
     <motion.header className="glass relative flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={SPRING}>
-      <div className="flex items-center gap-3">
-        <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-cyan to-blue text-black shadow-[0_0_24px_-4px] shadow-cyan/60">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan to-blue text-black shadow-[0_0_24px_-4px] shadow-cyan/60">
           <Icon name="sparkle" className="h-4 w-4" strokeWidth={2.2} />
         </div>
-        <div className="leading-tight">
+        <div className="min-w-0 leading-tight">
           <div className="text-[15px] font-semibold tracking-tight">JARVIS</div>
-          <div className="text-[11px] text-dim">{clock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })} · {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+          <div className="truncate text-[11px] text-dim">
+            <span className="hidden sm:inline">{clock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })} · </span>
+            <span className="hidden min-[360px]:inline sm:hidden">{clock.toLocaleDateString([], { day: "numeric", month: "short" })} · </span>
+            {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <button onClick={() => setPanel((p) => !p)} title="Voice and wake word"
-          className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] ring-1 transition ${wakeOn ? "bg-violet/12 text-violet ring-violet/30 hover:bg-violet/20" : "bg-white/[0.05] text-dim ring-white/[0.08] hover:text-white"}`}>
+      <div className="flex shrink-0 items-center gap-2">
+        <button onClick={() => setPanel((p) => !p)} title="Voice and wake word" aria-label="Voice and wake word"
+          className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] ring-1 transition pointer-coarse:min-h-11 pointer-coarse:px-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70 ${wakeOn ? "bg-violet/12 text-violet ring-violet/30 hover:bg-violet/20" : "bg-white/[0.05] text-dim ring-white/[0.08] hover:text-white"}`}>
           {wakeOn ? <motion.span className="h-1.5 w-1.5 rounded-full bg-violet" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.6, repeat: Infinity }} /> : <Icon name="mic" className="h-3.5 w-3.5" />}
           {wakeOn ? <><span className="sm:hidden">Archu</span><span className="hidden sm:inline">Hello Archu</span></> : "Voice"}
         </button>
@@ -399,7 +414,7 @@ function VoicePanel({ view, setView, close }: { view: PrefsView; setView: (v: Pr
                 <button className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50" onClick={() => choose(v.id)} disabled={!v.available}>
                   <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full ring-2 ${on ? "ring-violet" : "ring-white/25"}`}>{on && <motion.span layoutId="voice-dot" className="h-2 w-2 rounded-full bg-violet" />}</span>
                   <span className="min-w-0">
-                    <span className="block text-[13px] font-medium">{v.label} {v.online && <span className="ml-1 rounded-full bg-amber/15 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-amber">online</span>}</span>
+                    <span className="block text-[13px] font-medium">{v.label} {v.online && <span className="ml-1 rounded-full bg-amber/15 px-1.5 py-px text-[11px] font-semibold uppercase tracking-wide text-amber">online</span>}</span>
                     <span className="block truncate text-[11px] text-dim" title={v.available ? v.detail : v.note}>{v.available ? v.detail : v.note}</span>
                   </span>
                 </button>
@@ -410,7 +425,7 @@ function VoicePanel({ view, setView, close }: { view: PrefsView; setView: (v: Pr
             );
           })}
         </div>
-        <div className="mt-3 text-[10.5px] leading-snug text-slate-500">Online voices send the text JARVIS speaks to Microsoft's speech service. If one fails, an offline voice is used.</div>
+        <div className="mt-3 text-[11px] leading-snug text-slate-500">Online voices send the text JARVIS speaks to Microsoft's speech service. If one fails, an offline voice is used.</div>
         {(msg || view.last_fallback) && <div className="mt-2 rounded-xl bg-amber/10 px-3 py-2 text-[11.5px] text-amber ring-1 ring-amber/20">{msg ?? view.last_fallback}</div>}
       </motion.div>
     </>,
@@ -420,7 +435,7 @@ function VoicePanel({ view, setView, close }: { view: PrefsView; setView: (v: Pr
 
 function Card({ title, icon, children, className = "", right, delay = 0 }: { title: string; icon: string; children: React.ReactNode; className?: string; right?: React.ReactNode; delay?: number }) {
   return (
-    <motion.section layout className={`glass flex min-h-0 flex-col ${className}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay }}>
+    <motion.section className={`glass flex min-h-0 flex-col ${className}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay }}>
       <div className="flex items-center justify-between px-4 pb-3 pt-4">
         <div className="eyebrow flex items-center gap-1.5"><Icon name={icon} className="h-3.5 w-3.5" />{title}</div>
         {right}
@@ -479,11 +494,11 @@ function Composer({ inputRef, value, setValue, connected, onSend, onError }: {
 }) {
   return (
     <form className="p-3 sm:p-4" onSubmit={(e) => { e.preventDefault(); onSend(); }}>
-      <div className="flex items-center gap-2 rounded-full bg-black/35 p-1.5 pl-5 ring-1 ring-white/[0.08] transition focus-within:ring-cyan/40 focus-within:shadow-[0_0_0_6px_rgba(94,231,255,0.07)]">
-        <Icon name="sparkle" className="h-4 w-4 shrink-0 text-cyan/70" />
-        <input ref={inputRef} className="min-w-0 flex-1 bg-transparent py-2 text-[15px] outline-none placeholder:text-slate-500" placeholder={connected ? "Ask JARVIS anything…" : "Waiting for backend…"} value={value} onChange={(e) => setValue(e.target.value)} disabled={!connected} />
+      <div className="flex items-center gap-1.5 rounded-full bg-black/35 p-1.5 pl-3.5 ring-1 sm:gap-2 sm:pl-5 ring-white/[0.08] transition focus-within:ring-cyan/40 focus-within:shadow-[0_0_0_6px_rgba(94,231,255,0.07)]">
+        <Icon name="sparkle" className="hidden h-4 w-4 shrink-0 text-cyan/70 min-[360px]:block" />
+        <input aria-label="Command" ref={inputRef} className="min-h-11 min-w-0 flex-1 bg-transparent py-2 text-base outline-none sm:text-[15px] placeholder:text-slate-500" placeholder={connected ? "Ask JARVIS anything…" : "Waiting for backend…"} value={value} onChange={(e) => setValue(e.target.value)} disabled={!connected} />
         <PushToTalk onError={onError} />
-        <motion.button whileTap={{ scale: 0.9 }} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue text-white shadow-[0_6px_18px_-6px] shadow-blue transition hover:brightness-110 disabled:bg-white/10 disabled:text-slate-500 disabled:shadow-none" disabled={!connected || !value.trim()} aria-label="Send">
+        <motion.button whileTap={{ scale: 0.9 }} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70 text-white shadow-[0_6px_18px_-6px] shadow-blue transition hover:brightness-110 disabled:bg-white/10 disabled:text-slate-500 disabled:shadow-none" disabled={!connected || !value.trim()} aria-label="Send">
           <Icon name="send" className="h-4.5 w-4.5" strokeWidth={2.2} />
         </motion.button>
       </div>
@@ -529,7 +544,7 @@ function TaskCard({ run }: { run: Run | null }) {
 
 function StatusPill({ status }: { status: string }) {
   const c = { running: "bg-cyan/12 text-cyan ring-cyan/25", succeeded: "bg-mint/12 text-mint ring-mint/25", failed: "bg-rose/12 text-rose ring-rose/25", cancelled: "bg-amber/12 text-amber ring-amber/25" }[status] ?? "bg-white/5 text-dim ring-white/10";
-  return <motion.span key={status} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={SPRING} className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold capitalize ring-1 ${c}`}>{status}</motion.span>;
+  return <motion.span key={status} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={SPRING} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ring-1 ${c}`}>{status}</motion.span>;
 }
 
 function StepIcon({ status }: { status: string }) {
@@ -553,7 +568,7 @@ function WorkflowsCard({ workflows, disabled, runWf }: { workflows: Workflow[]; 
   const [q, setQ] = useState("");
   const shown = useMemo(() => workflows.filter((w) => `${w.name} ${w.canonical_intent ?? ""} ${w.aliases.join(" ")}`.toLowerCase().includes(q.toLowerCase())), [workflows, q]);
   return (
-    <Card title={`Saved workflows · ${workflows.length}`} icon="repeat" className="max-h-[26rem] lg:max-h-[42%]" delay={0.09}>
+    <Card title={`Saved workflows · ${workflows.length}`} icon="repeat" className="max-h-[26rem] lg:max-h-[min(26rem,55vh)]" delay={0.09}>
       <div className="px-4 pb-2"><input className="field w-full" placeholder="Filter…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <ul className="min-h-0 space-y-1 overflow-y-auto px-2 pb-3">
         <AnimatePresence initial={false}>
@@ -714,7 +729,7 @@ function ClaudeCard({ job, connected, send }: { job: ClaudeJob; connected: boole
 
 function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) => void }) {
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-80 flex-col gap-2">
+    <div className="pointer-events-none fixed right-4 top-[max(1rem,env(safe-area-inset-top))] z-50 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-2">
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div key={t.id} layout initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, x: 40 }} transition={SPRING}
@@ -736,21 +751,27 @@ function UsagePanel({ usage }: { usage: Usage | null }) {
   const runs = usage.cache_hits + usage.cache_misses;
   const ratio = runs ? usage.cache_hits / runs : 0;
   return (
-    <Card title="Usage" icon="bolt" delay={0.1}>
-      <div className="flex items-center gap-4 px-4">
+    <Card title="Usage" icon="bolt" delay={0.1} className="shrink-0">
+      <div className="flex items-center gap-3 px-4">
         <Ring value={ratio} />
         <div className="grid flex-1 grid-cols-3 gap-2 text-center">
-          <Stat label="on-device" value={usage.cache_hits} />
-          <Stat label="via LLM" value={usage.cache_misses} />
+          <Stat label="Local" value={usage.cache_hits} />
+          <Stat label="Via LLM" value={usage.cache_misses} />
           <Stat label="LLM calls" value={usage.planner_calls} />
         </div>
       </div>
-      <div className="space-y-1 px-4 pb-4 pt-3 text-[11px] text-dim">
+      <details className="group px-4 pb-3 pt-2 text-[11px] text-dim">
+        <summary className="flex cursor-pointer list-none items-center justify-between py-1 text-slate-300 marker:hidden [&::-webkit-details-marker]:hidden">
+          <span>Est. cost: ${total.toFixed(2)}{unknown ? " + unknown" : ""}</span>
+          <span className="text-dim transition group-open:rotate-90">›</span>
+        </summary>
+        <div className="space-y-1 pt-1">
         {purposes.map(([k, p]) => (
-          <div key={k} className="flex justify-between font-mono"><span>{k}</span><span>{p.calls}× · {p.input_tokens}/{p.output_tokens} tok · {p.est_cost == null ? "cost ?" : `$${p.est_cost.toFixed(4)}`}</span></div>
+          <div key={k} className="flex flex-wrap justify-between gap-x-2 font-mono"><span>{k}</span><span className="text-right">{p.calls}× · {p.input_tokens}/{p.output_tokens} tok · {p.est_cost == null ? "cost ?" : `$${p.est_cost.toFixed(4)}`}</span></div>
         ))}
-        <div className="pt-1 text-slate-300">Est. total: ${total.toFixed(4)}{unknown ? " + unknown (prices not configured)" : ""}</div>
-      </div>
+        {unknown && <div className="pt-1">Unknown = model prices not set in .env</div>}
+        </div>
+      </details>
     </Card>
   );
 }
@@ -758,7 +779,7 @@ function UsagePanel({ usage }: { usage: Usage | null }) {
 function Ring({ value }: { value: number }) {
   const r = 26, c = 2 * Math.PI * r;
   return (
-    <div className="relative h-16 w-16 shrink-0" title="Share of runs served from saved workflows">
+    <div className="relative h-14 w-14 shrink-0" title="Share of runs served from saved workflows">
       <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
         <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
         <motion.circle cx="32" cy="32" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="6" strokeLinecap="round" strokeDasharray={c}
@@ -774,7 +795,7 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <div className="text-lg font-semibold tracking-tight text-white"><Counter value={value} /></div>
-      <div className="text-[10px] uppercase tracking-wider text-dim">{label}</div>
+      <div className="whitespace-nowrap text-[11px] text-dim">{label}</div>
     </div>
   );
 }
@@ -832,7 +853,7 @@ function PushToTalk({ onError }: { onError: (m: string) => void }) {
   const rec = mode === "rec";
   return (
     <button type="button" onClick={toggle} disabled={mode === "sending"} title="Click to talk, click again to send" aria-label="Voice input"
-      className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-full transition ${rec ? "bg-rose text-white" : "bg-white/[0.07] text-slate-300 hover:bg-white/[0.12] hover:text-white"} disabled:opacity-40`}>
+      className={`relative grid h-11 w-11 shrink-0 place-items-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70 ${rec ? "bg-rose text-white" : "bg-white/[0.07] text-slate-300 hover:bg-white/[0.12] hover:text-white"} disabled:opacity-40`}>
       {rec && <motion.span className="absolute inset-0 rounded-full bg-rose" animate={{ scale: [1, 1.6], opacity: [0.5, 0] }} transition={{ duration: 1.1, repeat: Infinity }} />}
       {mode === "sending" ? <motion.span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} />
         : <Icon name={rec ? "stop" : "mic"} className="relative h-4.5 w-4.5" />}

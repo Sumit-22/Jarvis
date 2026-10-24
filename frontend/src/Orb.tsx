@@ -34,7 +34,7 @@ export function Orb({ state, connected, size = 168 }: { state: OrbState; connect
         <motion.div
           className="absolute -inset-10 rounded-full blur-3xl"
           style={{ background: `radial-gradient(circle, ${b}55, transparent 65%)` }}
-          animate={reduce ? undefined : { scale: busy ? [1, 1.18, 1] : [1, 1.05, 1], opacity: busy ? [0.7, 1, 0.7] : [0.45, 0.6, 0.45] }}
+          animate={reduce || !busy ? { scale: 1, opacity: 0.5 } : { scale: [1, 1.18, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ duration: busy ? 1.4 : 4, repeat: Infinity, ease: "easeInOut" }}
         />
         {/* ripple rings while busy */}
@@ -56,7 +56,7 @@ export function Orb({ state, connected, size = 168 }: { state: OrbState; connect
               key={i}
               className="absolute rounded-full mix-blend-screen blur-lg"
               style={{ width: "62%", height: "62%", left: `${10 + i * 14}%`, top: `${22 - i * 6 + (i === 2 ? 26 : 0)}%`, background: `radial-gradient(circle at 30% 30%, ${col}, transparent 70%)` }}
-              animate={reduce ? undefined : {
+              animate={reduce || !busy ? undefined : {
                 x: [0, (i - 1) * 22 + 14, -(i - 1) * 18 - 10, 0],
                 y: [0, -16 + i * 10, 18 - i * 8, 0],
                 scale: busy ? [1, 1.25, 0.9, 1] : [1, 1.08, 0.96, 1],

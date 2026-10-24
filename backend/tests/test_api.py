@@ -54,3 +54,14 @@ def test_secrets_never_logged(make_jarvis, settings):
     from jarvis import logging as jlog
     assert jlog.redact({"NOTION_TOKEN": "abc", "nested": {"llm_api_key": "x"}, "ok": 1}) == {
         "NOTION_TOKEN": "***", "nested": {"llm_api_key": "***"}, "ok": 1}
+
+
+def test_dashboard_cache_headers(make_jarvis, settings):
+    """index.html is revalidated every time (a stale one points at deleted asset files); hashed assets are immutable."""
+    import pytest
+    assets = sorted((settings.frontend_dist / "assets").glob("*.js")) if settings.frontend_dist.is_dir() else []
+    if not assets:
+        pytest.skip("dashboard not built")
+    c, _ = _client(make_jarvis, settings)
+    assert c.get("/").headers["cache-control"] == "no-cache"
+    assert "immutable" in c.get(f"/assets/{assets[0].name}").headers["cache-control"]

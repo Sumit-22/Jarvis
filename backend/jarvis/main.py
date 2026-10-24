@@ -202,8 +202,21 @@ def create_app(settings: Settings | None = None, jarvis: Jarvis | None = None) -
 
     app.include_router(api_router)
     if settings.frontend_dist.is_dir():
-        app.mount("/", StaticFiles(directory=str(settings.frontend_dist), html=True), name="ui")
+        app.mount("/", _DashboardFiles(directory=str(settings.frontend_dist), html=True), name="ui")
     return app
+
+
+class _DashboardFiles(StaticFiles):
+    """The built dashboard. Pages are revalidated every time (a cached index.html points at old asset files);
+    files under assets/ have a content hash in their name, so they can be cached for good."""
+
+    async def get_response(self, path: str, scope):  # type: ignore[no-untyped-def]
+        resp = await super().get_response(path, scope)
+        if path.replace("\\", "/").startswith("assets/"):
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            resp.headers["Cache-Control"] = "no-cache"
+        return resp
 
 
 def run() -> None:

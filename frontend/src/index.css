@@ -16,6 +16,9 @@
 }
 
 html, body, #root { height: 100%; }
+/* iPhone notch / home indicator (viewport-fit=cover in index.html) */
+#root { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 body {
   background: var(--color-bg);
   color: #eef2f8;
@@ -27,25 +30,33 @@ body {
 * { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.12) transparent; }
 
 @utility glass {
-  @apply rounded-[24px] border border-white/[0.07] bg-white/[0.04] backdrop-blur-2xl;
+  @apply rounded-[24px] border border-white/[0.07] bg-[#0c121b]/90;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 20px 50px -20px rgb(0 0 0 / 0.6);
 }
 @utility glass-strong {
-  @apply rounded-[24px] border border-white/[0.09] bg-[#0d131d]/80 backdrop-blur-3xl;
+  @apply rounded-[24px] border border-white/[0.09] bg-[#0f1621]/95 backdrop-blur-md;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 30px 80px -20px rgb(0 0 0 / 0.8);
 }
 @utility eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-dim; }
 @utility btn {
   @apply inline-flex items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition
-    active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35;
+    active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35 pointer-coarse:min-h-11 pointer-coarse:px-4
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70;
 }
 @utility btn-primary { @apply btn bg-blue text-white shadow-[0_6px_20px_-6px] shadow-blue/70 hover:brightness-110; }
 @utility btn-cyan { @apply btn bg-cyan/12 text-cyan ring-1 ring-cyan/30 hover:bg-cyan/20; }
 @utility btn-ghost { @apply btn bg-white/[0.06] text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.1]; }
 @utility btn-red { @apply btn bg-rose/15 text-rose ring-1 ring-rose/35 hover:bg-rose/25; }
 @utility field {
-  @apply rounded-xl border border-white/[0.08] bg-black/30 px-3 py-1.5 text-sm outline-none transition
+  @apply rounded-xl border border-white/[0.08] bg-black/30 px-3 py-1.5 text-base outline-none transition sm:text-sm pointer-coarse:min-h-11
     placeholder:text-slate-500 focus:border-cyan/50 focus:ring-4 focus:ring-cyan/10;
+}
+
+/* Scrolls, but no visible scrollbar (wheel, touch and keyboard still work). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

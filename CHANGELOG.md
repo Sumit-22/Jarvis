@@ -3,6 +3,25 @@
 Measured numbers are from the target laptop (i5-1135G7, 8 GB RAM, Windows 11) against real YouTube.
 Session-by-session test notes stay in `PROGRESS.md`.
 
+## 2026-10-24 (later) — dashboard fits every screen, Apple HIG pass
+
+Checked with a headless audit at 12 sizes (280 px folding phone, iPhone SE/14/Pro Max, iPad portrait and
+landscape, 1280x720, 1366x768, this laptop 1536x816, 1920x1080, 2560x1440): horizontal scroll, elements off
+screen, touch targets, text size, console errors. All clean after these changes.
+
+- Fixed: on short wide screens (iPad landscape, 1280x720) the left column's cards overlapped (Quick actions
+  under Usage, Usage text past its card) and Saved workflows was cut mid-row. Side columns now scroll on
+  their own; the orb is smaller on short screens; side columns are narrower between 1024 and 1280 px so the
+  text box keeps room.
+- Touch targets are at least 44 pt on touch screens (Apple HIG): buttons, chips, Run, Voice pill, filter,
+  text box, mic, Send (was 25-40 pt). Mouse layouts stay compact.
+- No text below 11 pt (was 9.5-10.5 px in usage labels, status pill, voice panel).
+- iPhone: safe-area padding for the notch and home indicator (`viewport-fit=cover`), 16 px inputs so Safari
+  does not zoom on focus, `dvh` heights for Safari's toolbar, web-app meta tags.
+- Narrow phones: logo no longer squashes, date shortens (hidden under 360 px), notifications fit the screen.
+- Keyboard focus ring on buttons.
+- Not checked: a real iPhone/iPad (only emulated sizes); light mode (the dashboard is dark only, by design).
+
 ## 2026-10-24 — YouTube skip ad, play fix, performance pass, free LLM
 
 ### Added
