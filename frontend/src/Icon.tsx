@@ -26,6 +26,7 @@ const PATHS: Record<string, string> = {
   sparkle: "M12 3.5 13.8 10.2 20.5 12 13.8 13.8 12 20.5 10.2 13.8 3.5 12 10.2 10.2z",
   shield: "M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z",
   list: "M8.5 6.5h11M8.5 12h11M8.5 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01",
+  update: "M12 4v11M7 10l5 5 5-5M5 19.5h14",
 };
 
 export function Icon({ name, className = "h-4 w-4", strokeWidth = 1.7 }: { name: string; className?: string; strokeWidth?: number }) {

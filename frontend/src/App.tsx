@@ -1,7 +1,7 @@
 import { AnimatePresence, LayoutGroup, animate, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { api, connectEvents, type JarvisEvent, type OrbState, type PrefsView, type Usage, type Workflow } from "./api";
+import { api, connectEvents, type JarvisEvent, type OrbState, type PrefsView, type UpdateInfo, type Usage, type Workflow } from "./api";
 import { Icon, workflowIcon } from "./Icon";
 import { Orb, PALETTE } from "./Orb";
 
@@ -27,6 +27,11 @@ type ClaudeJob = {
   plan?: string | null; result: string; error?: string | null; cost_usd?: number | null; elapsed_s: number;
   answer?: string;
 };
+
+type UpdateState = { info?: UpdateInfo; checking: boolean; checkError?: string; phase: "idle" | "applying" | "done" | "failed"; log: string[]; error?: string };
+// Set by the desktop app (pywebview); absent in a normal browser.
+type DesktopApi = { restart: () => Promise<boolean> };
+const desktopApi = () => (window as unknown as { pywebview?: { api?: DesktopApi } }).pywebview?.api;
 
 const SPRING = { type: "spring", stiffness: 380, damping: 32 } as const;
 
@@ -71,6 +76,20 @@ export default function App() {
   const [claude, setClaude] = useState<ClaudeJob | null>(null);
   const [voice, setVoice] = useState<PrefsView | null>(null);
   const [input, setInput] = useState("");
+  const [update, setUpdate] = useState<UpdateState>({ checking: false, phase: "idle", log: [] });
+  const checkUpdate = useCallback(async () => {
+    setUpdate((u) => ({ ...u, checking: true, checkError: undefined }));
+    try {
+      const info = await api.updateCheck();
+      setUpdate((u) => ({ ...u, info, checking: false }));
+    } catch (err) {
+      setUpdate((u) => ({ ...u, checking: false, checkError: (err as Error).message }));
+    }
+  }, []);
+  const applyUpdate = useCallback(async () => {
+    setUpdate((u) => ({ ...u, phase: "applying", log: [], error: undefined }));
+    try { await api.updateApply(); } catch (err) { setUpdate((u) => ({ ...u, phase: "failed", error: (err as Error).message })); }
+  }, []);
   const lastCommand = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -173,6 +192,16 @@ export default function App() {
         case "warning":
           say("jarvis", `⚠ ${e.message}`, undefined, "error");
           break;
+        case "update_progress":
+          setUpdate((u) => ({ ...u, phase: "applying", log: [...u.log, e.message] }));
+          break;
+        case "update_done":
+          setUpdate((u) => ({ ...u, phase: e.updated ? "done" : "idle", log: [...u.log, e.message] }));
+          if (e.updated) toast("Update installed", "Restart JARVIS to finish.", "update");
+          break;
+        case "update_failed":
+          setUpdate((u) => ({ ...u, phase: "failed", error: e.message }));
+          break;
       }
     },
     [say, refresh, toast],
@@ -184,6 +213,10 @@ export default function App() {
     api.health().then(setHealth).catch(() => {});
     api.prefs().then(setVoice).catch(() => {});
   }, [refresh]);
+  useEffect(() => {
+    const t = window.setTimeout(checkUpdate, 4000);  // quietly look for updates once after start
+    return () => window.clearTimeout(t);
+  }, [checkUpdate]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
@@ -218,7 +251,7 @@ export default function App() {
     <div className="relative min-h-full overflow-x-hidden lg:h-full">
       <Aurora state={connected ? orb : "offline"} />
       <div className="relative z-10 mx-auto flex max-w-[1560px] flex-col gap-4 p-3 sm:p-5 lg:h-full">
-        <TopBar connected={connected} health={health} running={running} onStop={() => api.stop(run?.execution_id)} voice={voice} setVoice={setVoice} />
+        <TopBar connected={connected} health={health} running={running} onStop={() => api.stop(run?.execution_id)} voice={voice} setVoice={setVoice} update={update} checkUpdate={checkUpdate} applyUpdate={applyUpdate} />
 
         <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)_280px] xl:grid-cols-[300px_minmax(0,1fr)_340px]">
           {/* Left: orb, quick actions, usage */}
@@ -320,10 +353,13 @@ function Aurora({ state }: { state: OrbState | "offline" }) {
   );
 }
 
-function TopBar({ connected, health, running, onStop, voice, setVoice }: {
+function TopBar({ connected, health, running, onStop, voice, setVoice, update, checkUpdate, applyUpdate }: {
   connected: boolean; health: { dry_run: boolean; llm_provider: string; llm_model: string } | null; running: boolean; onStop: () => void;
   voice: PrefsView | null; setVoice: (v: PrefsView) => void;
+  update: UpdateState; checkUpdate: () => void; applyUpdate: () => void;
 }) {
+  const [updOpen, setUpdOpen] = useState(false);
+  const available = (update.info?.behind ?? 0) > 0 || update.phase === "done";
   const [clock, setClock] = useState(() => new Date());
   const [panel, setPanel] = useState(false);
   const wakeOn = !!voice?.wake.running;
@@ -349,6 +385,13 @@ function TopBar({ connected, health, running, onStop, voice, setVoice }: {
           {wakeOn ? <motion.span className="h-1.5 w-1.5 rounded-full bg-violet" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.6, repeat: Infinity }} /> : <Icon name="mic" className="h-3.5 w-3.5" />}
           {wakeOn ? <><span className="sm:hidden">Archu</span><span className="hidden sm:inline">Hello Archu</span></> : "Voice"}
         </button>
+        <button onClick={() => { setUpdOpen((o) => !o); if (!updOpen && update.phase === "idle") checkUpdate(); }}
+          title="Software update" aria-label={available ? "Software update available" : "Software update"}
+          className={`relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] ring-1 transition pointer-coarse:min-h-11 pointer-coarse:px-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70 ${available ? "bg-blue/15 text-[#7cb8ff] ring-blue/40 hover:bg-blue/25" : "bg-white/[0.05] text-dim ring-white/[0.08] hover:text-white"}`}>
+          <Icon name="update" className="h-3.5 w-3.5" />
+          <span className={available ? "" : "hidden md:inline"}>{update.phase === "done" ? "Restart" : available ? "Update" : "Updates"}</span>
+          {available && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-blue ring-2 ring-[#0c121b]" />}
+        </button>
         {health?.dry_run && <span className="rounded-full bg-amber/15 px-2.5 py-1 text-[11px] font-semibold text-amber ring-1 ring-amber/30">DRY RUN</span>}
         <span className="hidden items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] text-dim ring-1 ring-white/[0.07] sm:inline-flex">
           <Icon name="shield" className="h-3.5 w-3.5" />
@@ -367,6 +410,7 @@ function TopBar({ connected, health, running, onStop, voice, setVoice }: {
         </AnimatePresence>
       </div>
       <AnimatePresence>{panel && voice && <VoicePanel view={voice} setView={setVoice} close={() => setPanel(false)} />}</AnimatePresence>
+      <AnimatePresence>{updOpen && <UpdatePanel update={update} check={checkUpdate} apply={applyUpdate} close={() => setUpdOpen(false)} />}</AnimatePresence>
     </motion.header>
   );
 }
@@ -427,6 +471,80 @@ function VoicePanel({ view, setView, close }: { view: PrefsView; setView: (v: Pr
         </div>
         <div className="mt-3 text-[11px] leading-snug text-slate-500">Online voices send the text JARVIS speaks to Microsoft's speech service. If one fails, an offline voice is used.</div>
         {(msg || view.last_fallback) && <div className="mt-2 rounded-xl bg-amber/10 px-3 py-2 text-[11.5px] text-amber ring-1 ring-amber/20">{msg ?? view.last_fallback}</div>}
+      </motion.div>
+    </>,
+    document.body,
+  );
+}
+
+function UpdatePanel({ update, check, apply, close }: { update: UpdateState; check: () => void; apply: () => void; close: () => void }) {
+  const { info, checking, phase } = update;
+  const desktop = desktopApi();
+  const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" }) : "");
+  const [restarting, setRestarting] = useState(false);
+  const restart = async () => { setRestarting(true); try { await desktop?.restart(); } catch { setRestarting(false); } };
+  return createPortal(
+    <>
+      <motion.div className="fixed inset-0 z-40" onClick={close} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+      <motion.div role="dialog" aria-label="Software update" className="glass-strong fixed right-3 top-[72px] z-50 max-h-[calc(100dvh-90px)] w-[min(400px,calc(100vw-24px))] overflow-y-auto p-5 sm:right-6"
+        initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.97 }} transition={SPRING}>
+        <div className="mb-4 flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan to-blue text-black"><Icon name="update" /></span>
+          <div className="min-w-0">
+            <div className="text-[15px] font-semibold">Software update</div>
+            <div className="truncate text-[12px] text-dim">{info?.current ? `Installed: ${info.current.sha} · ${fmt(info.current.date)}` : "JARVIS"}</div>
+          </div>
+        </div>
+
+        {phase === "applying" && (
+          <div className="mb-3 rounded-2xl bg-black/30 p-3 ring-1 ring-white/[0.06]">
+            <div className="mb-2 flex items-center gap-2 text-[13px] font-medium">
+              <motion.span className="h-3.5 w-3.5 rounded-full border-2 border-cyan/25 border-t-cyan" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} />
+              Updating… keep JARVIS open
+            </div>
+            <ul className="space-y-1 text-[12px] text-dim">{update.log.map((l, i) => <li key={i}>{l}</li>)}</ul>
+          </div>
+        )}
+        {phase === "done" && (
+          <div className="mb-3 rounded-2xl bg-mint/10 p-3 text-[13px] ring-1 ring-mint/25">
+            <div className="font-medium text-mint">Update installed</div>
+            <div className="mt-1 text-[12px] text-slate-300">{desktop ? "Restart JARVIS to start using it." : "Restart JARVIS (stop.ps1, then start.ps1) to start using it."}</div>
+            {desktop && <button className="btn-primary mt-3 w-full" onClick={restart} disabled={restarting}>{restarting ? "Restarting…" : "Restart now"}</button>}
+          </div>
+        )}
+        {phase === "failed" && (
+          <div className="mb-3 rounded-2xl bg-rose/10 p-3 text-[12px] text-rose-200 ring-1 ring-rose/25">
+            <div className="font-medium">Update failed — nothing was changed.</div>
+            <div className="mt-1 break-words text-rose-200/80">{update.error}</div>
+          </div>
+        )}
+
+        {phase !== "applying" && phase !== "done" && (
+          checking ? <div className="py-2 text-[13px] text-dim">Checking for updates…</div>
+          : update.checkError ? <div className="rounded-2xl bg-amber/10 p-3 text-[12px] text-amber ring-1 ring-amber/20">{update.checkError}</div>
+          : !info ? null
+          : !info.supported ? <div className="rounded-2xl bg-white/[0.04] p-3 text-[12.5px] text-slate-300 ring-1 ring-white/[0.06]">{info.reason}</div>
+          : (info.behind ?? 0) === 0 ? <div className="py-1 text-[13px]"><span className="font-medium text-mint">JARVIS is up to date.</span>{info.reason ? <div className="mt-1 text-[12px] text-dim">{info.reason}</div> : null}</div>
+          : (
+            <div>
+              <div className="text-[13px] font-medium">{info.behind} update{info.behind === 1 ? "" : "s"} available</div>
+              <ul className="no-scrollbar mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+                {info.commits?.map((c) => (
+                  <li key={c.sha} className="rounded-xl bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.05]">
+                    <div className="text-[12.5px] leading-snug text-slate-100">{c.subject}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-dim">{c.sha} · {fmt(c.date)}</div>
+                  </li>
+                ))}
+              </ul>
+              {info.reason && <div className="mt-2 text-[12px] text-amber">{info.reason}</div>}
+              <button className="btn-primary mt-3 w-full" onClick={apply} disabled={!info.can_update}>Update now</button>
+            </div>
+          )
+        )}
+
+        {phase !== "applying" && (
+          <button className="btn-ghost mt-3 w-full" onClick={check} disabled={checking}>{checking ? "Checking…" : "Check for updates"}</button>
+        )}
       </motion.div>
     </>,
     document.body,
@@ -734,7 +852,7 @@ function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number) =>
         {toasts.map((t) => (
           <motion.div key={t.id} layout initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, x: 40 }} transition={SPRING}
             className="glass-strong pointer-events-auto flex items-start gap-3 p-4" onClick={() => dismiss(t.id)}>
-            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-black ${t.icon === "sparkle" ? "bg-gradient-to-br from-[#ff9a62] to-[#d97757]" : t.icon === "mic" ? "bg-gradient-to-br from-violet to-[#5e5ce6]" : "bg-gradient-to-br from-amber to-[#ff9f0a]"}`}><Icon name={t.icon ?? "timer"} /></span>
+            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-black ${t.icon === "sparkle" ? "bg-gradient-to-br from-[#ff9a62] to-[#d97757]" : t.icon === "mic" ? "bg-gradient-to-br from-violet to-[#5e5ce6]" : t.icon === "update" ? "bg-gradient-to-br from-cyan to-blue" : "bg-gradient-to-br from-amber to-[#ff9f0a]"}`}><Icon name={t.icon ?? "timer"} /></span>
             <div className="min-w-0"><div className="text-sm font-semibold">{t.title}</div><div className="text-[13px] text-slate-300">{t.body}</div></div>
           </motion.div>
         ))}

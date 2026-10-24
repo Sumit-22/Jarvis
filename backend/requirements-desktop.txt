@@ -1,0 +1,2 @@
+# Desktop app window (install-app.ps1). Uses the Edge WebView2 runtime that ships with Windows 11.
+pywebview==6.2.1

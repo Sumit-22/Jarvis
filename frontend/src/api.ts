@@ -44,6 +44,13 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return data as T;
 }
 
+export type UpdateInfo = {
+  supported: boolean; reason?: string | null; branch?: string; root?: string;
+  current?: { sha: string; subject: string; date: string };
+  behind?: number; ahead?: number; dirty?: boolean; can_update?: boolean;
+  commits?: { sha: string; subject: string; date: string }[];
+};
+
 export const api = {
   command: (text: string) => req("POST", "/api/command", { text }),
   runWorkflow: (name: string, params: Record<string, unknown>) => req("POST", "/api/workflows/run", { name, params }),
@@ -55,6 +62,8 @@ export const api = {
   prefs: () => req<PrefsView>("GET", "/api/prefs"),
   setPrefs: (p: { voice?: string; wake_enabled?: boolean }) => req<PrefsView>("POST", "/api/prefs", p),
   testVoice: (voice: string) => req<{ voice: string; fallback: string | null }>("POST", "/api/voice/test", { voice }),
+  updateCheck: () => req<UpdateInfo>("GET", "/api/update/check"),
+  updateApply: () => req("POST", "/api/update/apply"),
   save: (execution_id: string, name: string) => req<Workflow>("POST", "/api/workflows/save", { execution_id, name }),
   voice: async (blob: Blob) => {
     const fd = new FormData();

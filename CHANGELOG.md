@@ -3,6 +3,31 @@
 Measured numbers are from the target laptop (i5-1135G7, 8 GB RAM, Windows 11) against real YouTube.
 Session-by-session test notes stay in `PROGRESS.md`.
 
+## 2026-10-24 (evening) — desktop app with self-update, lighter UI
+
+### Added
+- **Desktop app** (`jarvis/desktop.py`, `install-app.ps1`): native window (pywebview 6.2.1 on the Edge
+  WebView2 engine that ships with Windows 11), own icon, Start-menu and Desktop shortcuts. Starts the backend
+  itself, shows "Starting…" until it is ready, and stops JARVIS (with its Chromium windows) when closed.
+  Installed as a separate clone of `main` (`D:\Apps\JARVIS`) with its data in `D:\Apps\JARVIS-data`, so
+  coding in this folder never breaks the app and updates never touch your data.
+- **Self-update** (`jarvis/updater.py`, `GET /api/update/check`, `POST /api/update/apply`, Updates button in
+  the top bar): fetches `origin/main`, lists the new commits, fast-forwards, reinstalls only the requirement
+  files that changed, rebuilds the dashboard into `dist.new` and swaps it in. On a failed step the code is reset
+  to where it was. Refuses on another branch, with local changes, or with unpushed commits.
+- Settings: `DATA_DIR` (also reads `.env` from there) and `UFO_DIR` can now point outside the code folder.
+
+### Fixed
+- The browser kept serving an old dashboard after a rebuild (no `Cache-Control` on `index.html`; seen in
+  Firefox). Pages are now `no-cache`; hashed files under `assets/` are cached as immutable.
+- Left column on short windows: Quick actions fill the space left and scroll inside (no visible scrollbar),
+  Usage is one compact row with cost details folded away; nothing spills out of its card.
+
+### Performance (UI)
+- Removed what made the dashboard feel laggy on this laptop's integrated GPU: the ever-moving background under
+  `backdrop-filter` blur on every card (panels are solid now), the orb's animation while idle (it animates only
+  while JARVIS works), and Framer Motion `layout` animations on cards and messages.
+
 ## 2026-10-24 (later) — dashboard fits every screen, Apple HIG pass
 
 Checked with a headless audit at 12 sizes (280 px folding phone, iPhone SE/14/Pro Max, iPad portrait and

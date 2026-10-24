@@ -1,6 +1,7 @@
 """Settings loaded from C:\\Jarvis\\.env via pydantic-settings. Secrets live only here."""
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -11,11 +12,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/jarvis/config.py -> project root is two levels above backend/
 ROOT_DIR = Path(__file__).resolve().parents[2]
+# The desktop app keeps its data outside the code folder (DATA_DIR, set by the launcher), so updates never
+# touch it. A .env there overrides the one next to the code.
+_DATA_ENV = Path(os.environ["DATA_DIR"]) / ".env" if os.environ.get("DATA_DIR") else None
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=str(ROOT_DIR / ".env"), env_file_encoding="utf-8", extra="ignore"
+        env_file=(str(ROOT_DIR / ".env"), *([str(_DATA_ENV)] if _DATA_ENV else [])),
+        env_file_encoding="utf-8", extra="ignore"
     )
 
     host: str = "127.0.0.1"
@@ -67,6 +72,7 @@ class Settings(BaseSettings):
     discover_apps: bool = True
 
     data_dir: Path = ROOT_DIR / "data"
+    ufo_dir: Path = ROOT_DIR / "vendor" / "UFO"
 
     @model_validator(mode="before")
     @classmethod
@@ -87,10 +93,6 @@ class Settings(BaseSettings):
     @property
     def profiles_dir(self) -> Path:
         return self.data_dir / "profiles"
-
-    @property
-    def ufo_dir(self) -> Path:
-        return ROOT_DIR / "vendor" / "UFO"
 
     @property
     def frontend_dist(self) -> Path:

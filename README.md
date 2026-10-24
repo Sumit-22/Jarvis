@@ -50,6 +50,21 @@ Without an API key JARVIS still runs every saved workflow; only new commands (th
 | `directions to india gate` / `restaurants near me` / `headphones on amazon` | Google Maps / store search |
 | anything new | LLM plans it, validated against the tool list; offered for saving if every step verifies |
 
+## Desktop app (self-updating)
+
+```powershell
+.\stop.ps1                      # if JARVIS is running from this folder
+powershell -ExecutionPolicy Bypass -File .\install-app.ps1
+```
+
+This installs a separate copy of `main` at `D:\Apps\JARVIS` (data: `D:\Apps\JARVIS-data`) and adds
+**JARVIS** to the Start menu and Desktop. It opens in its own window; closing the window stops JARVIS.
+
+Updating: merge into `main` and push to GitHub. In the app, open **Updates** (top bar) >
+**Check for updates** > **Update now** > **Restart now**. It only fast-forwards a clean `main`,
+reinstalls Python packages if a requirements file changed, and rebuilds the dashboard if `frontend/`
+changed; if a step fails, the code is put back as it was.
+
 ## Voice
 
 - Say **"Hello Archu"**, wait for the ting, then the command, or say both at once: "Hello Archu, open gmail". On/off and the voice (Swara, Neerja, Heera, Zira) are in the top bar. Online voices send the spoken text to Microsoft's speech service; Heera needs Settings > Time & language > Speech > Add voices > English (India).

@@ -110,6 +110,11 @@
 ## Session 2026-10-24 (cont.): dashboard responsive + Apple HIG pass
 - Headless audit at 12 viewports (280-2560 px): before, cards overlapped on 1024x768 and 1280x720 (fixed-height 3-column layout), 34 touch targets under 44 pt, 10 px text. After: no horizontal scroll, no overlap, 0 small touch targets on touch devices, no text under 11 px, no console errors. Details in CHANGELOG.md. `npm run build` and `tsc --noEmit` pass. Not tried on a real iPhone/iPad.
 
+## Session 2026-10-24 (cont.): desktop app + self-update
+- Firefox (user's default browser) showed an old build: no Cache-Control on index.html. Now no-cache for pages, immutable for hashed assets. Firefox installed for Playwright (D:\Tools\ms-playwright\firefox-1543) to test; layout checked in Firefox at 6 window sizes.
+- UI lag: removed animated aurora under backdrop blur, idle orb animation, layout animations.
+- Desktop app: `jarvis/desktop.py` (pywebview 6.2.1 + pythonnet 3.2.1), `install-app.ps1` (clone of main at D:\Apps\JARVIS, data in D:\Apps\JARVIS-data, shortcuts), `jarvis/updater.py` + `/api/update/*` + Updates panel. 5 updater tests with real git repos (up to date, apply, dirty blocks, other branch blocks, failed build rolls back). 293 tests pass.
+
 ## Blocked on user
 - [ ] For the claude.ai website target: stop JARVIS, run `login.ps1`, sign in to claude.ai in the side window
 - [ ] Planner LLM: add Anthropic credits, or switch `.env` to a free OpenAI-compatible API (Gemini / Groq) via `LLM_BASE_URL`

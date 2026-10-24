@@ -233,3 +233,40 @@ async def ws(websocket: WebSocket) -> None:
         pass
     finally:
         j.bus.unsubscribe(q)
+
+
+def _updater(request: Request) -> Any:
+    """One Updater per app; its progress events are handed back to the event loop (it works in a thread)."""
+    upd = getattr(request.app.state, "updater", None)
+    if upd is None:
+        from ..updater import Updater
+        bus, loop = _j(request).bus, asyncio.get_running_loop()
+        upd = Updater(emit=lambda t, **k: loop.call_soon_threadsafe(lambda: bus.emit(t, **k)))
+        request.app.state.updater = upd
+    return upd
+
+
+@router.get("/update/check")
+async def update_check(request: Request) -> dict[str, Any]:
+    from ..updater import UpdateError
+    try:
+        return await _updater(request).check()
+    except UpdateError as e:
+        raise HTTPException(502, f"Could not check for updates: {e}") from e
+
+
+@router.post("/update/apply")
+async def update_apply(request: Request) -> dict[str, Any]:
+    """Starts the update in the background; progress, success and failure arrive as events."""
+    from ..updater import UpdateError
+    upd = _updater(request)
+    if upd.busy:
+        raise HTTPException(409, "an update is already running")
+
+    async def go() -> None:
+        try:
+            await upd.apply()
+        except UpdateError:
+            pass  # already sent to the UI as update_failed
+
+    return _background(request, go())
