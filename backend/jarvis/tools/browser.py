@@ -43,11 +43,22 @@ class BrowserManager:
             return ctx
 
     async def page(self, window: str) -> Any:
-        ctx = await self.context(window)
-        pages = [p for p in ctx.pages if not p.is_closed()]
-        page = pages[0] if pages else await ctx.new_page()
-        await page.bring_to_front()
-        return page
+        for attempt in (1, 2):
+            ctx = await self.context(window)
+            try:
+                pages = [p for p in ctx.pages if not p.is_closed()]
+                page = pages[0] if pages else await ctx.new_page()
+                await page.bring_to_front()
+                return page
+            except Exception as e:
+                # The user closed the window (or Chromium died) before our "close" handler ran:
+                # forget the dead context and launch a fresh one once.
+                if attempt == 2 or "closed" not in str(e).lower():
+                    raise
+                async with self._lock:
+                    if self._contexts.get(window) is ctx:
+                        self._contexts.pop(window, None)
+        raise RuntimeError("unreachable")
 
     def current_page(self, window: str) -> Any | None:
         ctx = self._contexts.get(window)

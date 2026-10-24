@@ -214,3 +214,41 @@ async def test_ufo_missing_reports_clearly(tmp_path, settings):
     ctx = ToolContext(settings=settings, db=None, ufo=DesktopAgentAdapter(tmp_path / "nope"), execution_id=None)
     res = await UfoDesktopTask(ctx).run(UfoTaskInput(task="open notepad"))
     assert not res.ok and "UFO not found" in res.error
+
+
+# ---------- browser manager ----------
+
+
+async def test_browser_page_relaunches_after_window_was_closed(tmp_path):
+    from jarvis.tools.browser import BrowserManager
+
+    class Page:
+        def is_closed(self):
+            return False
+
+        async def bring_to_front(self):
+            pass
+
+    class DeadCtx:
+        browser = None
+        pages: list = []
+
+        async def new_page(self):
+            raise RuntimeError("BrowserContext.new_page: Target page, context or browser has been closed")
+
+    class LiveCtx:
+        browser = None
+        pages = [Page()]
+
+        def on(self, *_):
+            pass
+
+    class Chromium:
+        async def launch_persistent_context(self, *a, **k):
+            return LiveCtx()
+
+    bm = BrowserManager(tmp_path)
+    bm._pw = type("PW", (), {"chromium": Chromium()})()
+    bm._contexts["main"] = DeadCtx()
+    page = await bm.page("main")
+    assert isinstance(page, Page) and isinstance(bm._contexts["main"], LiveCtx)

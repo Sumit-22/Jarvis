@@ -118,8 +118,12 @@ class Database:
         patterns: list[str] | None = None,
         canonical_intent: str = "",
         uses_llm_per_run: bool = False,
+        replace_patterns: bool = False,
     ) -> Workflow:
-        """Insert a workflow. If the name exists, bump version and disable the old row (kept for history)."""
+        """Insert a workflow. If the name exists, bump version and disable the old row (kept for history).
+
+        Aliases of the old version are kept; its patterns too unless replace_patterns (used by seed updates).
+        """
         with self._lock:
             prev = self.get_workflow_by_name(name)
             version = 1
@@ -127,7 +131,8 @@ class Database:
                 version = prev.version + 1
                 self._x("UPDATE workflows SET enabled=0 WHERE id=?", (prev.id,))
                 aliases = list(dict.fromkeys(prev.aliases + aliases))
-                patterns = list(dict.fromkeys(prev.patterns + (patterns or [])))
+                if not replace_patterns:
+                    patterns = list(dict.fromkeys(prev.patterns + (patterns or [])))
             wid = self._x(
                 "INSERT INTO workflows (name, canonical_intent, version, params_schema, steps, uses_llm_per_run, created_at, enabled)"
                 " VALUES (?,?,?,?,?,?,?,1)",

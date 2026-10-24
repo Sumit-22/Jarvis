@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from jarvis.main import create_app
+from jarvis.registry.seed_workflows import SEEDS
 
 
 def _client(make_jarvis, settings):
@@ -32,7 +33,7 @@ def test_command_wait_and_usage(make_jarvis, settings):
         assert r.json()["status"] == "succeeded" and r.json()["route"] == "local"
         u = c.get("/api/usage").json()
         assert u["cache_hits"] == 1 and u["planner_calls"] == 0
-        assert len(c.get("/api/workflows").json()) == 3
+        assert len(c.get("/api/workflows").json()) == len(SEEDS)
 
 
 def test_websocket_streams_events(make_jarvis, settings):

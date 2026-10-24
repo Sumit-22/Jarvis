@@ -3,6 +3,7 @@ export type OrbState = "idle" | "listening" | "planning" | "executing" | "error"
 export interface Workflow {
   id: number;
   name: string;
+  canonical_intent?: string;
   version: number;
   aliases: string[];
   params_schema: { required?: string[]; properties?: Record<string, unknown> };
@@ -21,6 +22,16 @@ export interface Usage {
 }
 
 export type JarvisEvent = { type: string; [k: string]: any };
+
+export interface VoiceOption { id: string; label: string; detail: string; online: boolean; available: boolean; note: string }
+export interface PrefsView {
+  prefs: { voice: string; wake_enabled: boolean };
+  voices: VoiceOption[];
+  wake: { running: boolean; error: string | null; mic?: string | null; last_heard?: string | null };
+  stt_available: boolean;
+  last_voice: string | null;
+  last_fallback: string | null;
+}
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const r = await fetch(path, {
@@ -41,6 +52,9 @@ export const api = {
   health: () => req<{ status: string; dry_run: boolean; llm_provider: string; llm_model: string }>("GET", "/api/health"),
   approve: (approval_id: string, approved: boolean) => req("POST", "/api/approve", { approval_id, approved }),
   stop: (execution_id?: string) => req("POST", "/api/stop", { execution_id: execution_id ?? null }),
+  prefs: () => req<PrefsView>("GET", "/api/prefs"),
+  setPrefs: (p: { voice?: string; wake_enabled?: boolean }) => req<PrefsView>("POST", "/api/prefs", p),
+  testVoice: (voice: string) => req<{ voice: string; fallback: string | null }>("POST", "/api/voice/test", { voice }),
   save: (execution_id: string, name: string) => req<Workflow>("POST", "/api/workflows/save", { execution_id, name }),
   voice: async (blob: Blob) => {
     const fd = new FormData();

@@ -14,6 +14,15 @@ $venvPy = "$Root\backend\.venv\Scripts\python.exe"
 if (-not (Test-Path $venvPy)) { Write-Host "Backend venv missing. Run .\install.ps1 first." -ForegroundColor Red; exit 1 }
 if (Test-Path $pidFile) { Write-Host "JARVIS seems to be running already (data\pids.json exists). Run .\stop.ps1 first." -ForegroundColor Yellow; exit 1 }
 
+# A shell opened before these user env vars were set does not have them; without
+# PLAYWRIGHT_BROWSERS_PATH Playwright looks for Chromium on C: and fails.
+foreach ($name in 'PLAYWRIGHT_BROWSERS_PATH', 'HF_HOME') {
+    $userValue = [Environment]::GetEnvironmentVariable($name, 'User')
+    if ($userValue -and -not [Environment]::GetEnvironmentVariable($name, 'Process')) {
+        [Environment]::SetEnvironmentVariable($name, $userValue, 'Process')
+    }
+}
+
 $pids = @{}
 $backend = Start-Process -FilePath $venvPy -ArgumentList '-m', 'jarvis.main' -WorkingDirectory "$Root\backend" `
     -RedirectStandardOutput "$logs\backend.out.log" -RedirectStandardError "$logs\backend.err.log" -WindowStyle Hidden -PassThru

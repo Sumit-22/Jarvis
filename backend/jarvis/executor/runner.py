@@ -35,6 +35,14 @@ class RunOutcome:
     error: str | None = None
 
     @property
+    def say(self) -> str | None:
+        """The last one-line answer a step produced for the user (e.g. tell_time), if any."""
+        for s in reversed(self.steps):
+            if s.status == "succeeded" and s.result and s.result.get("data", {}).get("say"):
+                return s.result["data"]["say"]
+        return None
+
+    @property
     def all_verified(self) -> bool:
         return self.status == "succeeded" and all(
             s.verification and s.verification.get("passed") for s in self.steps
@@ -143,7 +151,7 @@ class Executor:
             last_err: str | None = None
             result: ToolResult | None = None
             verification: VerificationResult | None = None
-            for attempt in range(1, self.max_retries + 2):
+            for attempt in range(1, (self.max_retries if tool.retryable else 0) + 2):
                 so.attempts = attempt
                 try:
                     result = await self._race(tool.run(args), cancel, timeout)
@@ -186,7 +194,8 @@ class Executor:
     def _finish(self, outcome: RunOutcome, status: str, error: str | None) -> RunOutcome:
         outcome.status, outcome.error = status, error
         self.db.finish_execution(outcome.execution_id, status, error)
-        self.bus.emit("run_finished", execution_id=outcome.execution_id, status=status, error=error, dry_run=self.dry_run)
+        self.bus.emit("run_finished", execution_id=outcome.execution_id, status=status, error=error, dry_run=self.dry_run,
+                      say=outcome.say)
         self.bus.set_state("error" if status == "failed" else "idle", execution_id=outcome.execution_id)
         jlog.log("run_finished", outcome.execution_id, status=status, error=error)
         return outcome

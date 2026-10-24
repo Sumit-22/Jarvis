@@ -40,6 +40,8 @@ class Tool(ABC):
     timeout_s: ClassVar[float] = 45.0
     # Set on tools whose every run calls an LLM (e.g. UFO); workflows containing them are flagged.
     uses_llm: ClassVar[bool] = False
+    # False for tools whose side effect must not happen twice (e.g. sending a message).
+    retryable: ClassVar[bool] = True
 
     def __init__(self, ctx: ToolContext):
         self.ctx = ctx

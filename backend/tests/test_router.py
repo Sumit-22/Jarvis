@@ -34,7 +34,7 @@ def test_fuzzy_confirm_band(make_jarvis):
 
 def test_miss(make_jarvis):
     j = make_jarvis()
-    m = match(j.db, normalize("what is the weather in delhi"))
+    m = match(j.db, normalize("order a pizza from dominos"))
     assert m.kind == "miss"
 
 
@@ -89,7 +89,7 @@ async def test_slot_values_keep_user_case_and_punctuation(make_jarvis):
 
 def test_strip_fillers():
     from jarvis.router.normalize import strip_fillers
-    assert strip_fillers("Hey Jarvis, can you play a video about C++ Templates?") == "Hey play a video about C++ Templates"
+    assert strip_fillers("Hey Jarvis, can you play a video about C++ Templates?") == "play a video about C++ Templates"
 
 
 async def test_slug_case_is_coerced(make_jarvis):

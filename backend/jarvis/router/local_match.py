@@ -12,6 +12,7 @@ from ..registry.db import Database, Workflow
 
 HIT_SCORE = 90
 CONFIRM_SCORE = 75
+SUBSET_GUARD_SCORE = 60
 
 _REPEAT_LAST = re.compile(r"^(repeat|redo|run|do)( the)? (last|previous) (workflow|task|command|one)( again)?$|^do (that|it) again$|^again$")
 _REPEAT_DAY = re.compile(r"^(repeat|redo|do) what (we|i) did (yesterday|today)( again)?$")
@@ -79,14 +80,16 @@ def match(db: Database, text: str, raw: str | None = None) -> LocalMatch:
         if text in wf.aliases:
             return LocalMatch(kind="hit", workflow=wf, score=100, via="alias")
 
-    best: tuple[float, Workflow | None] = (0.0, None)
+    best: tuple[float, Workflow | None, float] = (0.0, None, 0.0)
     for wf in workflows:
         for a in wf.aliases:
             s = fuzz.token_set_ratio(text, a)
             if s > best[0]:
-                best = (s, wf)
-    score, wf = best
-    if wf and score >= HIT_SCORE:
+                best = (s, wf, fuzz.token_sort_ratio(text, a))
+    score, wf, whole = best
+    # token_set_ratio scores 100 when an alias is a subset of the command ("open notepad" in
+    # "open notepad and type hello"); if the command has many extra words, ask instead of running.
+    if wf and score >= HIT_SCORE and whole >= SUBSET_GUARD_SCORE:
         return LocalMatch(kind="hit", workflow=wf, score=score, via="fuzzy")
     if wf and score >= CONFIRM_SCORE:
         return LocalMatch(kind="confirm", workflow=wf, score=score, via="fuzzy")

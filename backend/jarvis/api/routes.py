@@ -154,6 +154,67 @@ async def voice(request: Request, audio: UploadFile = File(...)) -> dict[str, An
     return result
 
 
+class PrefsIn(BaseModel):
+    voice: str | None = None
+    wake_enabled: bool | None = None
+
+
+class VoiceTestIn(BaseModel):
+    voice: str | None = None
+
+
+def _prefs_view(j: Any) -> dict[str, Any]:
+    from ..voice.tts import voice_list
+    wake = getattr(j, "wake", None)
+    tts = getattr(j, "tts", None)
+    return {"prefs": j.prefs.all(), "voices": voice_list(),
+            "wake": wake.status() if wake is not None else {"running": False, "error": None},
+            "stt_available": getattr(j, "stt", None) is not None,
+            "last_voice": getattr(tts, "last_voice", None), "last_fallback": getattr(tts, "last_fallback", None)}
+
+
+@router.get("/prefs")
+async def get_prefs(request: Request) -> dict[str, Any]:
+    return await asyncio.to_thread(_prefs_view, _j(request))
+
+
+@router.post("/prefs")
+async def set_prefs(body: PrefsIn, request: Request) -> dict[str, Any]:
+    from ..voice.tts import VOICE_IDS
+    j = _j(request)
+    if body.voice is not None and body.voice not in VOICE_IDS:
+        raise HTTPException(400, f"unknown voice {body.voice!r}")
+    j.prefs.update(voice=body.voice, wake_enabled=body.wake_enabled)
+    if body.wake_enabled is not None:
+        wake = getattr(j, "wake", None)
+        if body.wake_enabled:
+            from ..main import start_wake
+            why = start_wake(j)
+            if why:
+                raise HTTPException(503, f"wake word unavailable: {why}")
+        elif wake is not None:
+            await asyncio.to_thread(wake.stop)
+    view = await asyncio.to_thread(_prefs_view, j)
+    j.bus.emit("prefs", **view)
+    return view
+
+
+@router.post("/voice/test")
+async def voice_test(body: VoiceTestIn, request: Request) -> dict[str, Any]:
+    from ..voice.tts import SAMPLE, VOICE_IDS
+    j = _j(request)
+    tts = getattr(j, "tts", None)
+    if tts is None:
+        raise HTTPException(503, "text to speech is not available")
+    if body.voice is not None and body.voice not in VOICE_IDS:
+        raise HTTPException(400, f"unknown voice {body.voice!r}")
+    try:
+        used = await asyncio.to_thread(tts.say_now, SAMPLE, body.voice)
+    except RuntimeError as e:
+        raise HTTPException(500, str(e)) from e
+    return {"voice": used, "fallback": tts.last_fallback}
+
+
 @router.websocket("/ws")
 async def ws(websocket: WebSocket) -> None:
     origin = websocket.headers.get("origin")

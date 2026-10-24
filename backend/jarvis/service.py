@@ -81,6 +81,7 @@ class Jarvis:
             self.cancels.remove(execution_id)
         resp["status"] = outcome.status
         resp["error"] = outcome.error
+        resp["say"] = outcome.say
         resp["steps_result"] = [s.__dict__ for s in outcome.steps]
         if d.route == "llm" and outcome.all_verified and not self.settings.dry_run:
             suggested = self._suggest_name(d)
@@ -122,7 +123,7 @@ class Jarvis:
         tts = getattr(self, "tts", None)
         if tts is None or not self.settings.tts_enabled or self.settings.dry_run:
             return
-        msg = "Done." if outcome.status == "succeeded" else f"Run {outcome.status}."
+        msg = (outcome.say or "Done.") if outcome.status == "succeeded" else f"Run {outcome.status}."
         try:
             await tts.speak(msg)
         except Exception as e:  # TTS must never break a run

@@ -39,7 +39,8 @@ class Win32:
             if self.gui.IsWindowVisible(hwnd):
                 title = self.gui.GetWindowText(hwnd)
                 if title:
-                    out.append({"hwnd": hwnd, "title": title, "exe": self._exe(hwnd)})
+                    out.append({"hwnd": hwnd, "title": title, "exe": self._exe(hwnd),
+                                "class": self.gui.GetClassName(hwnd)})
             return True
 
         self.gui.EnumWindows(cb, None)

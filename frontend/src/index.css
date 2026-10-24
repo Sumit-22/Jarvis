@@ -1,21 +1,53 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #05080d;
-  --color-panel: #0b1219;
-  --color-line: #15232f;
-  --color-cyan: #22d3ee;
-  --color-dim: #7b8c99;
-  --font-sans: "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Code", Consolas, monospace;
+  --color-bg: #03050a;
+  --color-panel: #0b1018;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-cyan: #5ee7ff;
+  --color-blue: #0a84ff;
+  --color-violet: #bf5af2;
+  --color-mint: #30d158;
+  --color-amber: #ffd60a;
+  --color-rose: #ff453a;
+  --color-dim: #8b95a7;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
 }
 
 html, body, #root { height: 100%; }
-body { background: var(--color-bg); color: #e6f1f7; }
+body {
+  background: var(--color-bg);
+  color: #eef2f8;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+::selection { background: rgb(94 231 255 / 0.3); }
 
-@utility panel { @apply rounded-xl border border-line bg-panel; }
-@utility panel-title { @apply px-4 pt-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-dim; }
-@utility btn { @apply rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:opacity-40; }
-@utility btn-cyan { @apply btn bg-cyan/15 text-cyan ring-1 ring-cyan/40 hover:bg-cyan/25; }
-@utility btn-ghost { @apply btn text-dim ring-1 ring-line hover:text-white; }
-@utility btn-red { @apply btn bg-red-500/15 text-red-300 ring-1 ring-red-500/40 hover:bg-red-500/25; }
+* { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.12) transparent; }
+
+@utility glass {
+  @apply rounded-[24px] border border-white/[0.07] bg-white/[0.04] backdrop-blur-2xl;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 20px 50px -20px rgb(0 0 0 / 0.6);
+}
+@utility glass-strong {
+  @apply rounded-[24px] border border-white/[0.09] bg-[#0d131d]/80 backdrop-blur-3xl;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 30px 80px -20px rgb(0 0 0 / 0.8);
+}
+@utility eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-dim; }
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition
+    active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35;
+}
+@utility btn-primary { @apply btn bg-blue text-white shadow-[0_6px_20px_-6px] shadow-blue/70 hover:brightness-110; }
+@utility btn-cyan { @apply btn bg-cyan/12 text-cyan ring-1 ring-cyan/30 hover:bg-cyan/20; }
+@utility btn-ghost { @apply btn bg-white/[0.06] text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.1]; }
+@utility btn-red { @apply btn bg-rose/15 text-rose ring-1 ring-rose/35 hover:bg-rose/25; }
+@utility field {
+  @apply rounded-xl border border-white/[0.08] bg-black/30 px-3 py-1.5 text-sm outline-none transition
+    placeholder:text-slate-500 focus:border-cyan/50 focus:ring-4 focus:ring-cyan/10;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

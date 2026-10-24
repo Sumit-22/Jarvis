@@ -24,6 +24,7 @@ class FakeTool(Tool):
         self.input_model = real.input_model  # type: ignore[misc]
         self.requires_approval = real.requires_approval  # type: ignore[misc]
         self.uses_llm = real.uses_llm  # type: ignore[misc]
+        self.retryable = real.retryable  # type: ignore[misc]
         self.timeout_s = 2.0  # type: ignore[misc]
         self.behaviour = behaviour
         self.calls: list[dict] = []
@@ -44,7 +45,7 @@ class FakeTool(Tool):
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return Settings(_env_file=None, data_dir=tmp_path / "data", llm_provider="mock", approval_timeout_s=1.0,
-                    step_timeout_s=2.0, tts_enabled=False)
+                    step_timeout_s=2.0, tts_enabled=False, discover_apps=False)
 
 
 @pytest.fixture
